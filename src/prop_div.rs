@@ -47,20 +47,11 @@ fn normalize_coeffs(input: &[u64]) -> Vec<u64> {
         return vec![1];
     }
 
-    let first = input[0];
-
-    let mut full_gcd = 1;
+    let mut result = input[0];
     for i in 1..input.len() {
-        full_gcd = num::integer::gcd(first, input[i]);
+        result = num::integer::gcd(result, input[i]);
     }
-
-    dbg!(full_gcd);
-
-    if full_gcd != 1 {
-        return input.iter().map(|x| x / full_gcd).collect();
-    }
-
-    input.to_vec()
+    return input.into_iter().map(|x| x / result).collect();
 }
 
 #[cfg(test)]
@@ -113,6 +104,30 @@ mod tests {
 
         dbg!(result);
     }
+
+    #[test]
+    fn split_very_fractured() {
+        let numer = 50;
+        let coeffs = vec![10, 17, 13, 10];
+        let result = proportional_int_div(numer, &coeffs);
+        assert_eq!(vec![10, 17, 13, 10], result);
+    }
+
+    #[test]
+    fn split_without_gcd() {
+        let coeffs = vec![2, 3, 1, 2];
+        let normalized = normalize_coeffs(&coeffs);
+        assert_eq!(normalized, coeffs);
+    }
+
+    #[test]
+    fn split_without_gcd2() {
+        let coeffs = vec![10, 17, 13, 10];
+        let normalized = normalize_coeffs(&coeffs);
+        dbg!(&normalized);
+        assert_eq!(normalized, coeffs);
+    }
+
 
     #[test]
     fn normalize_success() {

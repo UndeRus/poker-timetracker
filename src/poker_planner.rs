@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Duration};
+use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
 use crate::{
     calendar::{get_workdays, WorkCalendar},
@@ -55,13 +55,13 @@ pub fn calculate_hours_by_tasks(
     loop {
         if let Some(workday) = current_workday {
             if let Some((task, remain_hours)) = current_task {
-                println!("TASK {} {}", task.id.clone(), remain_hours);
+                //println!("TASK {} {}", task.id.clone(), remain_hours);
                 let next_time_estimate = NaiveDateTime::new(workday.clone(), current_time_cursor)
                     + Duration::hours(remain_hours as i64);
                 let current_day_finish =
                     NaiveDateTime::new(workday.clone(), workday_finish.clone());
-                dbg!(current_day_finish);
-                dbg!(next_time_estimate);
+                //dbg!(current_day_finish);
+                //dbg!(next_time_estimate);
                 if next_time_estimate < current_day_finish {
                     tracks.push(TimeRecord {
                         task_id: task.id.clone(),
@@ -73,7 +73,7 @@ pub fn calculate_hours_by_tasks(
                     });
                     current_time_cursor += Duration::hours(remain_hours as i64);
                     current_task = task_iter.next();
-                    println!("Underflow next task");
+                    //println!("Underflow next task");
                     continue;
                 } else if next_time_estimate == current_day_finish {
                     tracks.push(TimeRecord {
@@ -87,13 +87,13 @@ pub fn calculate_hours_by_tasks(
                     current_time_cursor = workday_start.clone();
                     current_task = task_iter.next();
                     current_workday = workdays_iter.next();
-                    println!("Overflow next day,next task");
+                    //println!("Overflow next day,next task");
                     continue;
                 } else {
                     let hours_used =
                         (workday_finish.clone() - current_time_cursor).num_hours() as u64;
                     let hours_remain = remain_hours - hours_used;
-                    println!("Hours used {}, hours remain {}", hours_used, hours_remain);
+                    //println!("Hours used {}, hours remain {}", hours_used, hours_remain);
 
                     tracks.push(TimeRecord {
                         task_id: task.id.clone(),
@@ -121,11 +121,287 @@ pub fn calculate_hours_by_tasks(
 
 #[cfg(test)]
 mod tests {
-    use chrono::{NaiveDate, NaiveTime};
+    use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
-    use crate::models::PlanningTask;
+    use crate::{
+        models::PlanningTask,
+        poker_planner::{calculate_hours_by_tasks, TimeRecord},
+        pt,
+    };
 
-    use super::calculate_hours_by_tasks;
+    //TODO: tests
+
+    //1 day - 1 task, 3 days
+    #[test]
+    fn even_hours() {
+        let tasks = vec![pt!("1", 1), pt!("2", 1), pt!("3", 1)];
+
+        let time_records = calculate_hours_by_tasks(
+            &tasks,
+            &NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+            &NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+            &NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            &NaiveTime::from_hms_opt(18, 0, 0).unwrap(),
+        );
+
+        assert_eq!(time_records.len(), 3);
+        assert_eq!(
+            time_records,
+            vec![
+                TimeRecord {
+                    task_id: "1".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "2".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 9).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 9).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "3".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+            ]
+        );
+    }
+
+    //2,1,1 - 4 days
+    #[test]
+    fn uneven_full_hours() {
+        let tasks = vec![pt!("1", 2), pt!("2", 1), pt!("3", 1)];
+
+        let time_records = calculate_hours_by_tasks(
+            &tasks,
+            &NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+            &NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
+            &NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            &NaiveTime::from_hms_opt(18, 0, 0).unwrap(),
+        );
+
+        assert_eq!(time_records.len(), 4);
+        assert_eq!(
+            time_records,
+            vec![
+                TimeRecord {
+                    task_id: "1".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "1".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 9).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 9).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "2".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "3".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+            ]
+        );
+    }
+
+    //1,1.5,0.5,1 - 4 days
+    #[test]
+    fn uneven_split_hours() {
+        let tasks = vec![pt!("1", 2), pt!("2", 3), pt!("3", 1), pt!("4", 2)];
+
+        let time_records = calculate_hours_by_tasks(
+            &tasks,
+            &NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+            &NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
+            &NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            &NaiveTime::from_hms_opt(18, 0, 0).unwrap(),
+        );
+
+        assert_eq!(time_records.len(), 5);
+        assert_eq!(
+            time_records,
+            vec![
+                TimeRecord {
+                    task_id: "1".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "2".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 9).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 9).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "2".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+                        NaiveTime::from_hms_opt(14, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "3".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+                        NaiveTime::from_hms_opt(14, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "4".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+            ]
+        );
+    }
+
+    //1,1.7,1.3,1-5 days
+    #[test]
+    fn uneven_more_fractured_hours() {
+        let tasks = vec![pt!("1", 10), pt!("2", 17), pt!("3", 13), pt!("4", 10)];
+
+        let time_records = calculate_hours_by_tasks(
+            &tasks,
+            &NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+            &NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
+            &NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            &NaiveTime::from_hms_opt(18, 0, 0).unwrap(),
+        );
+
+
+        assert_eq!(time_records.len(), 5);
+        assert_eq!(
+            time_records,
+            vec![
+                TimeRecord {
+                    task_id: "1".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "2".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 9).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 9).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "2".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+                        NaiveTime::from_hms_opt(14, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "3".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+                        NaiveTime::from_hms_opt(14, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "4".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
+                        NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
+                        NaiveTime::from_hms_opt(18, 0, 0).unwrap()
+                    )
+                },
+            ]
+        );
+    }
 
     #[test]
     fn check_hours() {
@@ -150,16 +426,19 @@ mod tests {
             &NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             &NaiveTime::from_hms_opt(18, 0, 0).unwrap(),
         );
-        //assert_eq!(result.len(), tasks.len());
 
         dbg!(result);
-        // assert_eq!(*result.get("1").unwrap(), TimePart { part: 1, full: 101 });
-        // assert_eq!(
-        //     *result.get("2").unwrap(),
-        //     TimePart {
-        //         part: 100,
-        //         full: 101
-        //     }
-        // );
     }
+}
+
+#[macro_export]
+macro_rules! pt {
+    ($id:expr, $priority:expr) => {
+        PlanningTask {
+            // id: id.to_string(),
+            // priority: priority
+            id: $id.to_string(),
+            priority: $priority,
+        }
+    };
 }
