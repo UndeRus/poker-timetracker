@@ -17,19 +17,19 @@ impl WorkCalendar {
         }
     }
 
-    fn add_holiday(&mut self, holiday: &NaiveDate) {
+    pub fn add_holiday(&mut self, holiday: &NaiveDate) {
         self.holidays.push(holiday.clone());
     }
 
-    fn add_special_workday(&mut self, date: &NaiveDate) {
+    pub fn add_special_workday(&mut self, date: &NaiveDate) {
         self.special_workdays.push(date.clone());
     }
 
-    fn add_special_holiday(&mut self, date: &NaiveDate) {
+    pub fn add_special_holiday(&mut self, date: &NaiveDate) {
         self.special_holidays.push(date.clone());
     }
 
-    fn is_workday(&self, date: &NaiveDate) -> bool {
+    pub fn is_workday(&self, date: &NaiveDate) -> bool {
         let is_special_workday = self.special_workdays.contains(date);
         let is_special_holiday = self.special_holidays.contains(date);
         let is_weekend = self.weekend_days.contains(&date.weekday());

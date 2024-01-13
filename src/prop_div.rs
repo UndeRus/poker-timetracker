@@ -2,36 +2,22 @@ pub fn proportional_int_div(numerator: u64, denominator_coeffs: &[u64]) -> Vec<u
     if denominator_coeffs.is_empty() {
         return vec![];
     }
-
     let normalized_denominator_coeffs = normalize_coeffs(denominator_coeffs);
-
     let full_coeff_sum: u64 = normalized_denominator_coeffs.iter().sum();
-    let min_part = numerator / full_coeff_sum;
-
-    let remainder = numerator % full_coeff_sum;
     let mut result: Vec<u64> = normalized_denominator_coeffs
         .iter()
-        .map(|x| x * min_part)
+        .map(|x| x * numerator / full_coeff_sum)
         .collect();
+    let remainder = numerator as i64 - result.iter().sum::<u64>() as i64;
     if remainder > 0 {
         let mut remainder_remains = remainder;
         while remainder_remains > 0 {
-            for (v, c) in result.iter_mut().zip(normalized_denominator_coeffs.iter()) {
+            for (v, _c) in result.iter_mut().zip(normalized_denominator_coeffs.iter()) {
                 if remainder_remains == 0 {
                     break;
                 }
                 *v += 1;
                 remainder_remains -= 1;
-
-                /*
-                if c * min_part > remainder_remains {
-                    *v += remainder_remains;
-                    remainder_remains = 0;
-                } else {
-                    *v += c * min_part;
-                    remainder_remains -= c * min_part;
-                }
-                */
             }
         }
     }
@@ -127,7 +113,6 @@ mod tests {
         dbg!(&normalized);
         assert_eq!(normalized, coeffs);
     }
-
 
     #[test]
     fn normalize_success() {

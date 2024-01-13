@@ -1,17 +1,12 @@
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
+use serde::Serialize;
+
 use crate::{
     calendar::{get_workdays, WorkCalendar},
-    models::PlanningTask,
+    models::{PlanningTask, TimeRecord},
     prop_div::proportional_int_div,
 };
-
-#[derive(PartialEq, Debug)]
-pub struct TimeRecord {
-    pub task_id: String,
-    pub start: NaiveDateTime,
-    pub end: NaiveDateTime,
-}
 
 pub fn calculate_hours_by_tasks(
     tasks: &[PlanningTask],
@@ -19,8 +14,8 @@ pub fn calculate_hours_by_tasks(
     end_date: &NaiveDate,
     workday_start: &NaiveTime,
     workday_finish: &NaiveTime,
+    calendar: &WorkCalendar,
 ) -> Vec<TimeRecord> {
-    let calendar = WorkCalendar::new();
     let workdays = get_workdays(start_date, end_date, &calendar);
 
     let workday_length = (*workday_finish - *workday_start).num_hours() as u64;
@@ -45,7 +40,6 @@ pub fn calculate_hours_by_tasks(
     // current task remain time -= part of timespan
     // take next day
 
-    dbg!(time_sizes.clone());
     let mut task_iter = tasks.iter().zip(time_sizes);
     let mut workdays_iter = workdays.iter();
 
@@ -127,13 +121,15 @@ mod tests {
         models::PlanningTask,
         poker_planner::{calculate_hours_by_tasks, TimeRecord},
         pt,
+        calendar::WorkCalendar,
     };
 
-    //TODO: tests
+    use pretty_assertions::assert_eq;
 
     //1 day - 1 task, 3 days
     #[test]
     fn even_hours() {
+        let cal = WorkCalendar::new();
         let tasks = vec![pt!("1", 1), pt!("2", 1), pt!("3", 1)];
 
         let time_records = calculate_hours_by_tasks(
@@ -142,6 +138,7 @@ mod tests {
             &NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
             &NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             &NaiveTime::from_hms_opt(18, 0, 0).unwrap(),
+            &cal,
         );
 
         assert_eq!(time_records.len(), 3);
@@ -188,6 +185,7 @@ mod tests {
     //2,1,1 - 4 days
     #[test]
     fn uneven_full_hours() {
+        let cal = WorkCalendar::new();
         let tasks = vec![pt!("1", 2), pt!("2", 1), pt!("3", 1)];
 
         let time_records = calculate_hours_by_tasks(
@@ -196,6 +194,7 @@ mod tests {
             &NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
             &NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             &NaiveTime::from_hms_opt(18, 0, 0).unwrap(),
+            &cal,
         );
 
         assert_eq!(time_records.len(), 4);
@@ -253,6 +252,7 @@ mod tests {
     //1,1.5,0.5,1 - 4 days
     #[test]
     fn uneven_split_hours() {
+        let cal = WorkCalendar::new();
         let tasks = vec![pt!("1", 2), pt!("2", 3), pt!("3", 1), pt!("4", 2)];
 
         let time_records = calculate_hours_by_tasks(
@@ -261,6 +261,7 @@ mod tests {
             &NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
             &NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             &NaiveTime::from_hms_opt(18, 0, 0).unwrap(),
+            &cal,
         );
 
         assert_eq!(time_records.len(), 5);
@@ -329,6 +330,7 @@ mod tests {
     //1,1.7,1.3,1-5 days
     #[test]
     fn uneven_more_fractured_hours() {
+        let cal = WorkCalendar::new();
         let tasks = vec![pt!("1", 10), pt!("2", 17), pt!("3", 13), pt!("4", 10)];
 
         let time_records = calculate_hours_by_tasks(
@@ -337,10 +339,12 @@ mod tests {
             &NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
             &NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             &NaiveTime::from_hms_opt(18, 0, 0).unwrap(),
+            &cal,
         );
 
+        assert_eq!(time_records.len(), 7);
 
-        assert_eq!(time_records.len(), 5);
+        dbg!(&time_records);
         assert_eq!(
             time_records,
             vec![
@@ -352,6 +356,17 @@ mod tests {
                     ),
                     end: NaiveDateTime::new(
                         NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+                        NaiveTime::from_hms_opt(17, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "2".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
+                        NaiveTime::from_hms_opt(17, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 8).unwrap(),
                         NaiveTime::from_hms_opt(18, 0, 0).unwrap()
                     )
                 },
@@ -374,14 +389,14 @@ mod tests {
                     ),
                     end: NaiveDateTime::new(
                         NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
-                        NaiveTime::from_hms_opt(14, 0, 0).unwrap()
+                        NaiveTime::from_hms_opt(12, 0, 0).unwrap()
                     )
                 },
                 TimeRecord {
                     task_id: "3".to_string(),
                     start: NaiveDateTime::new(
                         NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
-                        NaiveTime::from_hms_opt(14, 0, 0).unwrap()
+                        NaiveTime::from_hms_opt(12, 0, 0).unwrap()
                     ),
                     end: NaiveDateTime::new(
                         NaiveDate::from_ymd_opt(2024, 1, 10).unwrap(),
@@ -389,10 +404,21 @@ mod tests {
                     )
                 },
                 TimeRecord {
-                    task_id: "4".to_string(),
+                    task_id: "3".to_string(),
                     start: NaiveDateTime::new(
                         NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
                         NaiveTime::from_hms_opt(10, 0, 0).unwrap()
+                    ),
+                    end: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
+                        NaiveTime::from_hms_opt(12, 0, 0).unwrap()
+                    )
+                },
+                TimeRecord {
+                    task_id: "4".to_string(),
+                    start: NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
+                        NaiveTime::from_hms_opt(12, 0, 0).unwrap()
                     ),
                     end: NaiveDateTime::new(
                         NaiveDate::from_ymd_opt(2024, 1, 11).unwrap(),
@@ -405,6 +431,7 @@ mod tests {
 
     #[test]
     fn check_hours() {
+        let cal = WorkCalendar::new();
         let tasks = vec![
             PlanningTask {
                 priority: 1,
@@ -425,6 +452,7 @@ mod tests {
             &NaiveDate::from_ymd_opt(2023, 1, 31).unwrap(),
             &NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             &NaiveTime::from_hms_opt(18, 0, 0).unwrap(),
+            &cal,
         );
 
         dbg!(result);
@@ -435,8 +463,6 @@ mod tests {
 macro_rules! pt {
     ($id:expr, $priority:expr) => {
         PlanningTask {
-            // id: id.to_string(),
-            // priority: priority
             id: $id.to_string(),
             priority: $priority,
         }
