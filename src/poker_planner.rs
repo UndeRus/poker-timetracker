@@ -1,7 +1,5 @@
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
-use serde::Serialize;
-
 use crate::{
     calendar::{get_workdays, WorkCalendar},
     models::{PlanningTask, TimeRecord},
@@ -118,10 +116,10 @@ mod tests {
     use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
     use crate::{
+        calendar::WorkCalendar,
         models::PlanningTask,
         poker_planner::{calculate_hours_by_tasks, TimeRecord},
         pt,
-        calendar::WorkCalendar,
     };
 
     use pretty_assertions::assert_eq;

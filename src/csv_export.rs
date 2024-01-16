@@ -1,7 +1,6 @@
-
 use crate::models::TimeRecord;
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use std::io;
-use chrono::{NaiveDate, NaiveTime, NaiveDateTime};
 
 pub fn csv_export(time_records: &[TimeRecord]) {
     let mut writer = csv::Writer::from_writer(io::stdout());
@@ -13,7 +12,5 @@ pub fn csv_export(time_records: &[TimeRecord]) {
     writer.flush().unwrap();
 }
 
-
 #[cfg(test)]
-mod tests {
-}
+mod tests {}

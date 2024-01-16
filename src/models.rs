@@ -1,6 +1,7 @@
-use serde::Serialize;
 use chrono::NaiveDateTime;
+use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PlanningTask {
     pub priority: u64,
     pub id: String,
@@ -14,7 +15,6 @@ impl PlanningTask {
         }
     }
 }
-
 
 #[derive(PartialEq, Debug, Serialize)]
 pub struct TimeRecord {
