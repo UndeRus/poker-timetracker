@@ -1,9 +1,8 @@
 use crate::models::TimeRecord;
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use std::io;
 
-pub fn csv_export(time_records: &[TimeRecord]) {
-    let mut writer = csv::Writer::from_writer(io::stdout());
+pub fn csv_export<W: io::Write + Sized>(output: W, time_records: &[TimeRecord]) {
+    let mut writer = csv::Writer::from_writer(output);
 
     for time_record in time_records.iter() {
         writer.serialize(&time_record).unwrap();
@@ -11,6 +10,3 @@ pub fn csv_export(time_records: &[TimeRecord]) {
 
     writer.flush().unwrap();
 }
-
-#[cfg(test)]
-mod tests {}

@@ -5,11 +5,10 @@ mod models;
 pub mod poker_planner;
 mod prop_div;
 
-use std::path::PathBuf;
 use chrono::{NaiveDate, NaiveTime, ParseError};
 use clap::Parser;
-
-use models::PlanningTask;
+use std::io;
+use std::path::PathBuf;
 
 #[derive(Parser)]
 struct Cli {
@@ -22,27 +21,40 @@ struct Cli {
     #[arg(short, long, value_parser = parse_date)]
     end_date: NaiveDate,
 
-    #[arg(long, default_value_t = 10)]
-    day_start: u64,
+    #[arg(long, default_value = "10:00", value_parser = parse_time)]
+    day_start: NaiveTime,
 
-    #[arg(long, default_value_t = 18)]
-    day_end: u64,
-
+    #[arg(long, default_value = "18:00", value_parser = parse_time)]
+    day_end: NaiveTime,
 }
 
 fn parse_date(arg: &str) -> Result<NaiveDate, ParseError> {
     NaiveDate::parse_from_str(arg, "%d-%m-%Y")
 }
 
-fn main() {
-    let cli = Cli::parse();
-    run_pokerplanner(cli.tasks, cli.start_date, cli.end_date);
+fn parse_time(arg: &str) -> Result<NaiveTime, ParseError> {
+    NaiveTime::parse_from_str(arg, "%H:%M")
 }
 
-fn run_pokerplanner(tasks_file: PathBuf, date_from: NaiveDate, date_to: NaiveDate) {
+fn main() {
+    let cli = Cli::parse();
+    run_pokerplanner(
+        cli.tasks,
+        cli.start_date,
+        cli.end_date,
+        cli.day_start,
+        cli.day_end,
+    );
+}
+
+fn run_pokerplanner(
+    tasks_file: PathBuf,
+    date_from: NaiveDate,
+    date_to: NaiveDate,
+    workday_start: NaiveTime,
+    workday_end: NaiveTime,
+) {
     let calendar = calendar::WorkCalendar::new();
-    let workday_start = NaiveTime::from_hms_opt(10, 0, 0).unwrap();
-    let workday_end = NaiveTime::from_hms_opt(18, 0, 0).unwrap();
     let tasks = csv_import::csv_import(tasks_file).unwrap();
     let time_records = poker_planner::calculate_hours_by_tasks(
         &tasks,
@@ -52,7 +64,7 @@ fn run_pokerplanner(tasks_file: PathBuf, date_from: NaiveDate, date_to: NaiveDat
         &workday_end,
         &calendar,
     );
-    csv_export::csv_export(&time_records);
+    csv_export::csv_export(io::stdout(), &time_records);
 }
 
 /*

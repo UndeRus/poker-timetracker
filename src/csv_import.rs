@@ -31,7 +31,7 @@ mod tests {
     use super::*;
     #[test]
     fn import_csv() {
-        let mut path =PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         path.push("resources/test/demo-tasks.csv");
         let result = csv_import(path);
         assert!(result.is_ok());
