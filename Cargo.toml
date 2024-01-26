@@ -3,7 +3,17 @@ name = "poker-tracker"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "pt"
+path = "src/main.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
 
 [dependencies]
 chrono = {version = "0.4.31", features = ["serde"]}
